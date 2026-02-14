@@ -1,0 +1,31 @@
+[project]
+name = "bex"
+version = "0.0.0"
+description = "bex"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.1",
+]
+
+[tool.ruff]
+line-length = 88
+indent-width = 4
+
+[tool.ruff.format]
+docstring-code-format = true
+docstring-code-line-length = 80
+
+[tool.ruff.lint]
+extend-select = ["I", "RUF022", "RUF023", "W505", "TC", "FA", "C4", "PYI", "COM818"]
+extend-ignore = ["D203", "D213"]
+
+[tool.ruff.lint.pycodestyle]
+max-doc-length = 80
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
