@@ -39,7 +39,7 @@ jobs:
           name: bex-${{ matrix.target.target }}
           path: |
             build/*.zip
-            build/*.sha256
+            build/*.zip.sha256
 
   release:
     runs-on: ubuntu-24.04
