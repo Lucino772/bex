@@ -1,0 +1,22 @@
+[project]
+name = "bex-hooks-python"
+version = "0.1.0"
+description = "bex-hooks-python"
+authors = [
+    { name = "Lucino772" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "httpx>=0.28.1",
+    "pydantic>=2.11.4",
+    "stdlibx-compose>=0.1.0,<1",
+    "stdlibx-option>=0.1.0,<1",
+    "stdlibx-result>=0.1.0,<1",
+]
+
+[tool.uv.build-backend]
+module-name = "bex.hooks.python"
+
+[build-system]
+requires = ["uv_build>=0.9.28,<0.10.0"]
+build-backend = "uv_build"
