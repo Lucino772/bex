@@ -33,3 +33,29 @@ jobs:
         run: uvx hatch build --hooks-only
       - name: Build Binary
         run: uv run ./release/build.py --zip ${{ matrix.target.target }}
+      - name: Upload assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: bex-${{ matrix.target.target }}
+          path: |
+            build/*.zip
+            build/*.sha256
+
+  release:
+    runs-on: ubuntu-24.04
+    needs: build
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v5
+        with:
+          path: release-assets
+          merge-multiple: true
+      - name: Upload assets to GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: github.ref_type == 'tag'
+        with:
+          files: |
+            release-assets/*
