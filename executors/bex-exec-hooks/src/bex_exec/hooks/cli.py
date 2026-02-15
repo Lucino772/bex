@@ -17,8 +17,8 @@ from stdlibx.compose import flow
 from stdlibx.result import Error, Ok, as_result
 from stdlibx.result import fn as result
 
-from bex.exec.executor import execute
-from bex.exec.spec import Context, Environment
+from bex_exec.hooks.executor import execute
+from bex_exec.hooks.spec import Context, Environment
 
 
 class _FormatCommandError(Exception):

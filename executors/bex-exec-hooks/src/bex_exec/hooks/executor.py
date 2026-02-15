@@ -13,14 +13,14 @@ from stdlibx.option import Nothing, Some, optional_of
 from stdlibx.result import Error, Ok, Result, as_result, result_of
 from stdlibx.result import fn as result
 
-from bex.exec.plugin import load_plugins
+from bex_exec.hooks.plugin import load_plugins
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, MutableMapping
 
     from rich.console import Console
 
-    from bex.exec.spec import Context, Environment, HookFunc
+    from bex_exec.hooks.spec import Context, Environment, HookFunc
 
 
 def execute(

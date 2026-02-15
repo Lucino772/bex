@@ -12,7 +12,7 @@ from stdlibx.option import optional_of
 from stdlibx.result import Error, Ok, Result, as_result, result_of
 from stdlibx.result import fn as result
 
-from bex.exec.spec import BexPluginError, HookFunc, PluginInfo
+from bex_exec.hooks.spec import BexPluginError, HookFunc, PluginInfo
 
 if TYPE_CHECKING:
     from rich.console import Console
