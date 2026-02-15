@@ -15,12 +15,12 @@ from stdlibx.option import optional_of
 from stdlibx.result import Error, Ok, as_result
 from stdlibx.result import fn as result
 
-from bex.hooks.python._interface import is_context_cancelled
+from bex_hooks.python._interface import is_context_cancelled
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
-    from bex.hooks.python._interface import Context
+    from bex_hooks.python._interface import Context
 
 
 def append_path(previous: str, *values: str) -> str:

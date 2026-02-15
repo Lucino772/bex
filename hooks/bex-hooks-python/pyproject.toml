@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [tool.uv.build-backend]
-module-name = "bex.hooks.python"
+module-name = "bex_hooks.python"
 
 [build-system]
 requires = ["uv_build>=0.9.28,<0.10.0"]

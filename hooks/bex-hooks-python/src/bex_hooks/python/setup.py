@@ -20,7 +20,7 @@ from urllib.parse import urljoin
 import httpx
 from pydantic import BaseModel, Field
 
-from bex.hooks.python.utils import (
+from bex_hooks.python.utils import (
     EtaCalculator,
     append_path,
     download_file,
@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     import logging
     from collections.abc import Iterable, Mapping
 
-    from bex.hooks.python._interface import Context
+    from bex_hooks.python._interface import Context
 
 _UV_RELEASES_URL = "https://api.github.com/repos/astral-sh/uv/releases"
 _UV_DOWNLOAD_URL = "https://github.com/astral-sh/uv/releases/download/{version}/"

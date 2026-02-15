@@ -9,13 +9,13 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
-from bex.hooks.files.utils import EtaCalculator, download_file
+from bex_hooks.files.utils import EtaCalculator, download_file
 
 if TYPE_CHECKING:
     import logging
     from collections.abc import Mapping
 
-    from bex.hooks.files._interface import Context
+    from bex_hooks.files._interface import Context
 
 
 def archive(ctx: Context, args: Mapping[str, Any], *, logger: logging.Logger) -> None:

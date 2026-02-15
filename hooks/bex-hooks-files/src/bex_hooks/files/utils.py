@@ -8,12 +8,12 @@ from typing import TYPE_CHECKING, Any
 
 import httpx
 
-from bex.hooks.files._interface import is_context_cancelled
+from bex_hooks.files._interface import is_context_cancelled
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from bex.hooks.files._interface import Context
+    from bex_hooks.files._interface import Context
 
 
 def download_file(

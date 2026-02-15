@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from bex.hooks.python.setup import setup_python
+from bex_hooks.python.setup import setup_python
 
 
 def get_hooks():
