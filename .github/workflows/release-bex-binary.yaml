@@ -37,9 +37,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: bex-${{ matrix.target.target }}
-          path: |
-            build/*.zip
-            build/*.zip.sha256
+          path: build/*
 
   release:
     runs-on: ubuntu-24.04
