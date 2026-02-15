@@ -28,7 +28,7 @@ class _FormatCommandError(Exception):
         self.value = value
 
 
-app = typer.Typer(name="bex")
+app = typer.Typer(add_completion=False, name="bex")
 
 
 def main():
