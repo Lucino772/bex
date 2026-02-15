@@ -1,11 +1,11 @@
 # -*- mode: python ; coding: utf-8 -*-
-
+from PyInstaller.utils.hooks import copy_metadata
 
 a = Analysis(
     ['../src/bex/__main__.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=copy_metadata("bex"),
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

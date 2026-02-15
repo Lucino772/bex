@@ -6,7 +6,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
-import tomllib
+import zipfile
 from pathlib import Path
 from typing import NamedTuple
 
@@ -40,6 +40,7 @@ def build():
     parser.add_argument("target")
     parser.add_argument("-o", "--out", default=str(working_dir / "build"))
     parser.add_argument("--debug", action="store_true")
+    parser.add_argument("--zip", action="store_true")
     args = parser.parse_args()
 
     target = _parse_target(args.target)
@@ -51,22 +52,21 @@ def build():
     build_dir.mkdir(exist_ok=True)
 
     logger.info("Building bex binary")
-    bex_bin, version = _build_pyinstaller_dist(build_dir, target, debug=args.debug)
-    logger.info("Bex (%s) binary built '%s'", version, str(bex_bin))
+    bex_bin = _build_pyinstaller_dist(
+        build_dir, target, debug=args.debug, zipped=args.zip
+    )
+    logger.info("Bex binary built '%s'", str(bex_bin))
 
     logger.info("Generating sha256 for bex binary")
     bex_bin_sha = _generate_sha256_file(bex_bin)
     logger.info("SHA256 file generated '%s'", bex_bin_sha)
 
 
-def _build_pyinstaller_dist(build_dir: Path, target: Target, *, debug: bool = False):
+def _build_pyinstaller_dist(
+    build_dir: Path, target: Target, *, debug: bool = False, zipped: bool = False
+):
     with tempfile.TemporaryDirectory(dir=build_dir if debug else None) as tmp_dir:
         _work_path = Path(tmp_dir) / "_build"
-
-        # Get version from pyproject.toml
-        with (_ROOT_DIR / "pyproject.toml").open("rb") as fp:
-            version = str(tomllib.load(fp)["project"]["version"])
-        logger.info("Bex version: %s", version)
 
         # Build binary using pyinstaller
         pyinstaller_bin = Path(shutil.which("pyinstaller"))  # type: ignore
@@ -87,18 +87,29 @@ def _build_pyinstaller_dist(build_dir: Path, target: Target, *, debug: bool = Fa
             msg = "Failed to build binary with pyinstaller"
             raise RuntimeError(msg)
 
-        # Rename temp binary with version
         _temp_binary_file = Path(tmp_dir) / f"bex{EXE}"
-        _target_binary_file = build_dir / (
-            f"bex-{version}-{target.arch}-{target.vendor}-{target.os}-{target.abi}{EXE}"
+        _target = (
+            f"bex-{target.arch}-{target.vendor}-{target.os}-{target.abi}"
             if target.abi is not None
-            else f"bex-{version}-{target.arch}-{target.vendor}-{target.os}{EXE}"
+            else f"bex-{target.arch}-{target.vendor}-{target.os}"
         )
-        if _target_binary_file.exists():
-            _target_binary_file.unlink()
-        shutil.move(_temp_binary_file, _target_binary_file)
+        if not zipped:
+            _target_binary_file = build_dir / f"{_target}{EXE}"
+            if _target_binary_file.exists():
+                _target_binary_file.unlink()
+            shutil.move(_temp_binary_file, _target_binary_file)
 
-        return _target_binary_file, version
+            return _target_binary_file
+        else:
+            _target_archive_name = build_dir / f"{_target}.zip"
+            if _target_archive_name.exists():
+                _target_archive_name.unlink()
+
+            with zipfile.ZipFile(_target_archive_name, "w") as archive:
+                archive.write(_temp_binary_file, f"bex{EXE}")
+
+            _temp_binary_file.unlink()
+            return _target_archive_name
 
 
 # Utils

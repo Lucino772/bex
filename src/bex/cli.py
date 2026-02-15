@@ -9,6 +9,7 @@ import signal
 import subprocess
 import sys
 from functools import partial
+from importlib.metadata import version as get_version
 from pathlib import Path  # noqa: TC003
 from typing import Annotated
 
@@ -53,6 +54,7 @@ def main():
 
 def _cli(
     ctx: typer.Context,
+    version: Annotated[bool, typer.Option("--version")] = False,
     file: Annotated[
         Path | None,
         typer.Option(
@@ -91,6 +93,11 @@ def _cli(
         ),
     ] = None,
 ):
+    if version:
+        typer.echo(f"Python: {platform.python_version()} ({platform.system()})")
+        typer.echo(f"Bex: {get_version('bex')}")
+        ctx.exit(0)
+
     console = Console()
     token, cancel = with_cancel(default_token())
 
