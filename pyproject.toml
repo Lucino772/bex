@@ -35,5 +35,8 @@ ban-relative-imports = "all"
 [tool.uv.workspace]
 members = [
     "bootstrap",
+    "executors/bex-exec-hooks",
+    "hooks/bex-hooks-python",
+    "hooks/bex-hooks-files",
 ]
 
