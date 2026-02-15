@@ -1,0 +1,27 @@
+[project]
+name = "bex-bootstrap"
+version = "0.1.0"
+description = "bex-bootstrap"
+authors = [
+    { name = "Lucino772"}
+]
+requires-python = ">=3.11"
+dependencies = [
+    "ruamel-yaml>=0.18.10,<1",
+    "stdlibx-cancel>=0.1.0",
+    "stdlibx-compose>=0.1.0,<1",
+    "stdlibx-option>=0.1.0,<1",
+    "stdlibx-result>=0.1.0,<1",
+    "typer>=0.16.0,<1",
+]
+
+[tool.uv.build-backend]
+module-name = "bex.bootstrap"
+
+
+[project.scripts]
+bex = "bex.bootstrap:main"
+
+[build-system]
+requires = ["uv_build>=0.9.28,<0.10.0"]
+build-backend = "uv_build"
