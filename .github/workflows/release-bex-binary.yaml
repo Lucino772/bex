@@ -37,7 +37,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: bex-${{ matrix.target.target }}
-          path: build/*
+          path: |
+            build/*.zip
+            build/*.sha256
 
   release:
     runs-on: ubuntu-24.04
@@ -51,6 +53,8 @@ jobs:
         with:
           path: release-assets
           merge-multiple: true
+      - name: Check files
+        run: ls -lah release-assets
       - name: Upload assets to GitHub Release
         uses: softprops/action-gh-release@v2
         if: github.ref_type == 'tag'
