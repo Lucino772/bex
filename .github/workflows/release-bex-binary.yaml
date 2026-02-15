@@ -29,8 +29,10 @@ jobs:
           version: "0.9.28"
       - name: Sync dependencies
         run: uv sync --locked --package bex --dev
-      - name: Update version file
-        run: uvx hatch build --hooks-only
+      - name: Update version
+        run: |
+          uvx hatch version
+          uvx hatch build --hooks-only
       - name: Build Binary
         run: uv run ./release/build.py --zip ${{ matrix.target.target }}
       - name: Upload assets
