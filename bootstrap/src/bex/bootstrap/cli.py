@@ -268,7 +268,7 @@ def _create_isolated_environment(
         [
             str(uv_bin),
             "venv",
-            "--clear",
+            "--allow-existing",
             "--no-project",
             "--seed",
             "--python",
