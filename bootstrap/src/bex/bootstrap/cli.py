@@ -9,7 +9,8 @@ import signal
 import subprocess
 import sys
 from functools import partial
-from typing import TYPE_CHECKING, Annotated
+from pathlib import Path  # noqa: TC003
+from typing import Annotated
 
 import typer
 from rich.console import Console
@@ -34,9 +35,6 @@ from bex.bootstrap.shared import (
 )
 from bex.bootstrap.utils import wait_process
 from bex.bootstrap.uv import download_uv
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 _ENTRYPOINT_PATTERN = re.compile(
     r"(?P<module>[\w.]+)\s*"
@@ -204,12 +202,12 @@ def _execute(config: Config, python_bin: Path) -> int:
     if config["bootstrap_only"] is True:
         return 0
 
-    # NOTE: Convert executor entrypoint to python CLI options
+    # NOTE: Convert entrypoint to python CLI options
     #       either "-m <module_name>" or to "-c <script>" with a script
     #       that imports module and execute function.
-    match = _ENTRYPOINT_PATTERN.match(config["executor"])
+    match = _ENTRYPOINT_PATTERN.match(config["entrypoint"])
     if match is None:
-        msg = f"Invalid format for executor entrypoint: {config['executor']}"
+        msg = f"Invalid format for entrypoint: {config['entrypoint']}"
         raise BexError(msg)
 
     attrs = list(filter(None, (match.group("attr") or "").split(".")))
@@ -218,7 +216,7 @@ def _execute(config: Config, python_bin: Path) -> int:
     else:
         opts = [
             "-c",
-            "import {} as _executor;_executor.{}()".format(
+            "import {} as _entrypoint;_entrypoint.{}()".format(
                 match.group("module"), ".".join(attrs)
             ),
         ]

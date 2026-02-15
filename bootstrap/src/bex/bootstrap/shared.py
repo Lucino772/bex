@@ -27,4 +27,4 @@ class Config(TypedDict):
     uv_version: str | None
     requires_python: str
     requirements: str
-    executor: str
+    entrypoint: str

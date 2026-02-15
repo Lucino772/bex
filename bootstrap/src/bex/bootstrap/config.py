@@ -111,7 +111,7 @@ def _parse_config(
                     "uv_version": config.get("uv"),
                     "requires_python": config["requires-python"],
                     "requirements": config.get("requirements", ""),
-                    "executor": config["executor"],
+                    "entrypoint": config["entrypoint"],
                 }
             )
         ),
@@ -119,8 +119,8 @@ def _parse_config(
 
 
 def _validate_config(config: dict[str, Any]) -> dict[str, Any]:
-    if not {"requires-python", "executor"}.issubset(config.keys()):
-        _missing = {"requires-python", "executor"}.difference(config.keys())
+    if not {"requires-python", "entrypoint"}.issubset(config.keys()):
+        _missing = {"requires-python", "entrypoint"}.difference(config.keys())
         msg = "Invalid configuration, missing: {}".format(", ".join(_missing))
         raise BexError(msg)
 
