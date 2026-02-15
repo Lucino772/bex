@@ -9,7 +9,6 @@ import signal
 import subprocess
 import sys
 from functools import partial
-from importlib.metadata import version as get_version
 from pathlib import Path  # noqa: TC003
 from typing import Annotated
 
@@ -26,6 +25,11 @@ from stdlibx.cancel import (
 from stdlibx.compose import flow
 from stdlibx.result import Error, Ok, Result, as_result, result_of
 from stdlibx.result import fn as result
+
+try:
+    from bex._version import __version__
+except Exception:
+    __version__ = "unknown"
 
 from bex.config import load_configuration
 from bex.shared import BexError, BexPyVenvError, BexUvError, Config
@@ -95,7 +99,7 @@ def _cli(
 ):
     if version:
         typer.echo(f"Python: {platform.python_version()} ({platform.system()})")
-        typer.echo(f"Bex: {get_version('bex')}")
+        typer.echo(f"Bex: {__version__}")
         ctx.exit(0)
 
     console = Console()
