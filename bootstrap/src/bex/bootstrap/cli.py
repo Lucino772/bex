@@ -23,7 +23,7 @@ from stdlibx.cancel import (
     with_cancel,
 )
 from stdlibx.compose import flow
-from stdlibx.result import Error, Ok, as_result, result_of
+from stdlibx.result import Error, Ok, Result, as_result, result_of
 from stdlibx.result import fn as result
 
 from bex.bootstrap.config import load_configuration
@@ -99,7 +99,6 @@ def _cli(
     console = Console()
     token, cancel = with_cancel(default_token())
 
-    # Configura Logger
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.INFO)
     for handler in root_logger.handlers[:]:
@@ -110,21 +109,21 @@ def _cli(
     signal.signal(signal.SIGTERM, lambda _, __: cancel())
     signal.signal(signal.SIGINT, lambda _, __: cancel())
 
-    _result = flow(
+    exec_result = flow(
         load_configuration(
             directory, file, bootstrap_only=bootstrap_only, extra_args=passthrough
         ),
         result.map_(lambda val: (val,)),
-        result.zipped(as_result(partial(_bootstrap, token, console, root_logger))),
+        result.zipped(partial(_bootstrap, token, console, root_logger)),
         result.inspect(
             lambda _: console.print(
                 "Environment bootstrapped successfully", style="green"
             )
         ),
-        result.and_then(as_result(lambda val: _execute(*val))),
+        result.and_then(lambda val: _execute(*val)),
     )
 
-    match _result:
+    match exec_result:
         case Ok(retcode):
             ctx.exit(retcode)
         case Error(CancellationTokenCancelledError()):
@@ -155,27 +154,57 @@ def _bootstrap(
     console: Console,
     logger: logging.Logger,
     config: Config,
-):
+) -> Result[Path, Exception]:
     with console.status("Bootstrapping environment"):
-        bex_dir = config["directory"] / ".bex"
-        bex_dir.mkdir(exist_ok=True)
+        # Get working directory
+        match flow(
+            result_of(lambda: config["directory"] / ".bex"),
+            result.and_then(as_result(lambda path: path.mkdir(exist_ok=True) or path)),
+        ):
+            case Ok(directory):
+                working_dir = directory
+            case Error(_) as err:
+                return Error(err.error)
 
-        env_hash = hashlib.sha1(config["filename"].read_bytes()).hexdigest()  # noqa: S324
-        env_hash_file = bex_dir / ".envhash"
-        if env_hash_file.exists() and env_hash == env_hash_file.read_text():
-            return (
-                bex_dir
-                / ".venv"
-                / ("Scripts" if sys.platform == "win32" else "bin")
-                / ("python.exe" if sys.platform == "win32" else "python")
-            )
-
-        python_bin = flow(
+        # Get current env hash
+        # TODO: Show warning if we failed to compute env hash
+        env_hash = flow(
             result_of(
-                download_uv,
-                cancel_token,
-                bex_dir / "cache" / "uv",
-                version=config["uv_version"],
+                lambda: hashlib.sha1(config["filename"].read_bytes()).hexdigest()  # noqa: S324
+            ),
+            result.unwrap_or(""),
+        )
+
+        # Get env hash file
+        match result_of(lambda: working_dir / ".envhash"):
+            case Ok(file):
+                env_hash_file = file
+            case Error(_) as err:
+                return Error(err.error)
+
+        # Check if env has changed
+        match result_of(
+            lambda: env_hash_file.exists() and env_hash == env_hash_file.read_text()
+        ):
+            case Ok(hash_matched) if hash_matched is True:
+                return result_of(
+                    lambda: (
+                        working_dir
+                        / ".venv"
+                        / ("Scripts" if sys.platform == "win32" else "bin")
+                        / ("python.exe" if sys.platform == "win32" else "python")
+                    )
+                )
+            case Error(_) as err:
+                return Error(err.error)
+
+        # Create / Sync python virtual environment
+        match flow(
+            result_of(lambda: working_dir / "cache" / "uv"),
+            result.and_then(
+                as_result(
+                    partial(download_uv, cancel_token, version=config["uv_version"])
+                )
             ),
             result.inspect(lambda _: console.print("[+] Downloaded UV")),
             result.and_then(
@@ -184,66 +213,99 @@ def _bootstrap(
                         console,
                         logger,
                         cancel_token,
-                        bex_dir,
+                        working_dir,
                         uv_bin,
                         config["requires_python"],
                         config["requirements"],
                     )
                 )
             ),
-            result.unwrap_or_raise(),
-        )
+        ):
+            case Ok(python_bin):
+                # NOTE: If this fail, we don't want the entire program to crash
+                #       instead, we could just show a warning message
+                _ = result_of(env_hash_file.write_text, env_hash)
+                return Ok(python_bin)
+            case Error(_) as err:
+                return Error(err.error)
 
-        env_hash_file.write_text(env_hash)
-        return python_bin
 
-
-def _execute(config: Config, python_bin: Path) -> int:
+def _execute(config: Config, python_bin: Path) -> Result[int, Exception]:
     if config["bootstrap_only"] is True:
-        return 0
+        return Ok(0)
 
     # NOTE: Convert entrypoint to python CLI options
     #       either "-m <module_name>" or to "-c <script>" with a script
     #       that imports module and execute function.
-    match = _ENTRYPOINT_PATTERN.match(config["entrypoint"])
-    if match is None:
-        msg = f"Invalid format for entrypoint: {config['entrypoint']}"
-        raise BexError(msg)
+    match flow(
+        result_of(_ENTRYPOINT_PATTERN.match, config["entrypoint"]),
+        result.and_then(
+            lambda match: (
+                Ok[re.Match[str], Exception](match)
+                if match is not None
+                else Error[re.Match[str], Exception](
+                    BexError(
+                        f"Invalid plugin entrypoint format '{config['entrypoint']}'"
+                    )
+                )
+            )
+        ),
+        result.and_then(
+            as_result(
+                lambda match_: (
+                    ["-m", str(match_.group("module"))]
+                    if len(
+                        attrs := list(
+                            filter(None, (match_.group("attr") or "").split("."))
+                        )
+                    )
+                    == 0
+                    else [
+                        "-c",
+                        "import {} as _entrypoint;_entrypoint.{}()".format(
+                            match_.group("module"), ".".join(attrs)
+                        ),
+                    ]
+                )
+            )
+        ),
+    ):
+        case Ok(opts_):
+            opts = opts_
+        case Error(_) as err:
+            return Error(BexError("Failed to convert entrypoint to python CLI options"))
 
-    attrs = list(filter(None, (match.group("attr") or "").split(".")))
-    if len(attrs) == 0:
-        opts = ["-m", match.group("module")]
-    else:
-        opts = [
-            "-c",
-            "import {} as _entrypoint;_entrypoint.{}()".format(
-                match.group("module"), ".".join(attrs)
-            ),
-        ]
+    match result.collect(
+        result_of(
+            lambda: {
+                **os.environ,
+                "BEX_FILE": str(config["filename"]),
+                "BEX_DIRECTORY": str(config["directory"]),
+            }
+        ),
+        result_of(
+            lambda: [
+                str(python_bin),
+                *opts,
+                *config["extra_args"],
+            ]
+        ),
+    ):
+        case Ok((env, args)):
+            if sys.platform == "win32":
+                return result_of(
+                    subprocess.call,
+                    env=env,
+                    stdin=sys.stdin,
+                    stdout=sys.stdout,
+                    stderr=sys.stderr,
+                    shell=False,
+                )
 
-    env = {
-        **os.environ,
-        "BEX_FILE": str(config["filename"]),
-        "BEX_DIRECTORY": str(config["directory"]),
-    }
-    args = [
-        str(python_bin),
-        *opts,
-        *config["extra_args"],
-    ]
-
-    if sys.platform == "win32":
-        return subprocess.call(
-            args,
-            env=env,
-            stdin=sys.stdin,
-            stdout=sys.stdout,
-            stderr=sys.stderr,
-            shell=False,
-        )
-
-    # NOTE: Must be careful what process is executed here
-    return os.execve(python_bin, args, env)  # noqa: S606
+            # NOTE: Must be careful what process is executed here
+            return Ok(os.execve(python_bin, args, env))  # noqa: S606
+        case Error(_) as err:
+            return Error(err.error)
 
 
 def _create_isolated_environment(
