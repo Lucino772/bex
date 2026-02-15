@@ -1,0 +1,35 @@
+name: Release Bex binary
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ${{ matrix.target.runs-on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - runs-on: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+          - runs-on: windows-2025
+            target: x86_64-pc-windows-msvc
+          - runs-on: macos-15-intel
+            target: x86_64-apple-darwin
+          - runs-on: macos-15
+            target: aarch64-apple-darwin
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.9.28"
+      - name: Sync dependencies
+        run: uv sync --locked --package bex --dev
+      - name: Update version file
+        run: uvx hatch build --hooks-only
+      - name: Build Binary
+        run: uv run ./release/build.py --zip ${{ matrix.target.target }}
