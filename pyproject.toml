@@ -32,6 +32,9 @@ build-backend = "hatchling.build"
 [tool.hatch.version]
 source = "vcs"
 
+[tool.hatch.build.hooks.vcs]
+version-file = "src/bex/_version.py"
+
 [tool.ruff]
 line-length = 88
 indent-width = 4

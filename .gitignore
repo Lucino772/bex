@@ -1,6 +1,9 @@
 # Created by https://www.toptal.com/developers/gitignore/api/linux,macos,python,windows,visualstudiocode
 # Edit at https://www.toptal.com/developers/gitignore?templates=linux,macos,python,windows,visualstudiocode
 
+### Custom ###
+_version.py
+
 ### Linux ###
 *~
 
