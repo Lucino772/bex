@@ -13,7 +13,7 @@ from stdlibx.option import optional_of
 from stdlibx.result import Error, Ok, Result, as_result, result_of
 from stdlibx.result import fn as result
 
-from bex.bootstrap.shared import BexError, Config
+from bex.shared import BexError, Config
 
 _INLINE_METADATA_REGEX = (
     r"(?m)^# /// (?P<type>[a-zA-Z0-9-]+)$\s(?P<content>(^#(| .*)$\s)+)^# ///$"

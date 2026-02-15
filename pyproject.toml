@@ -1,16 +1,33 @@
 [project]
 name = "bex"
-version = "0.0.0"
+version = "0.1.0"
 description = "bex"
 readme = "README.md"
+authors = [
+    { name = "Lucino772"}
+]
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "ruamel-yaml>=0.18.10,<1",
+    "stdlibx-cancel>=0.1.0",
+    "stdlibx-compose>=0.1.0,<1",
+    "stdlibx-option>=0.1.0,<1",
+    "stdlibx-result>=0.1.0,<1",
+    "typer>=0.16.0,<1",
+]
 
 [dependency-groups]
 dev = [
     "ruff>=0.15.1",
     "pyinstaller>=6.17.0",
 ]
+
+[project.scripts]
+bex = "bex:main"
+
+[build-system]
+requires = ["uv_build>=0.9.28,<0.10.0"]
+build-backend = "uv_build"
 
 [tool.ruff]
 line-length = 88
@@ -21,7 +38,7 @@ docstring-code-format = true
 docstring-code-line-length = 80
 
 [tool.ruff.lint.isort]
-known-first-party = ["bex"]
+known-first-party = ["bex", "bex_exec", "bex_hooks"]
 
 [tool.ruff.lint]
 extend-select = ["I", "RUF022", "RUF023", "W505", "TC", "FA", "C4", "PYI", "COM818"]
@@ -35,7 +52,6 @@ ban-relative-imports = "all"
 
 [tool.uv.workspace]
 members = [
-    "bootstrap",
     "executors/bex-exec-hooks",
     "hooks/bex-hooks-python",
     "hooks/bex-hooks-files",

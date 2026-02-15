@@ -5,7 +5,6 @@ requires-python = ">=3.11"
 [manifest]
 members = [
     "bex",
-    "bex-bootstrap",
     "bex-exec-hooks",
     "bex-hooks-files",
     "bex-hooks-python",
@@ -53,27 +52,8 @@ wheels = [
 
 [[package]]
 name = "bex"
-version = "0.0.0"
-source = { virtual = "." }
-
-[package.dev-dependencies]
-dev = [
-    { name = "pyinstaller" },
-    { name = "ruff" },
-]
-
-[package.metadata]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "pyinstaller", specifier = ">=6.17.0" },
-    { name = "ruff", specifier = ">=0.15.1" },
-]
-
-[[package]]
-name = "bex-bootstrap"
 version = "0.1.0"
-source = { editable = "bootstrap" }
+source = { editable = "." }
 dependencies = [
     { name = "ruamel-yaml" },
     { name = "stdlibx-cancel" },
@@ -81,6 +61,12 @@ dependencies = [
     { name = "stdlibx-option" },
     { name = "stdlibx-result" },
     { name = "typer" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pyinstaller" },
+    { name = "ruff" },
 ]
 
 [package.metadata]
@@ -91,6 +77,12 @@ requires-dist = [
     { name = "stdlibx-option", specifier = ">=0.1.0,<1" },
     { name = "stdlibx-result", specifier = ">=0.1.0,<1" },
     { name = "typer", specifier = ">=0.16.0,<1" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pyinstaller", specifier = ">=6.17.0" },
+    { name = "ruff", specifier = ">=0.15.1" },
 ]
 
 [[package]]

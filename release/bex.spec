@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ['../bootstrap/src/bex/bootstrap/__main__.py'],
+    ['../src/bex/__main__.py'],
     pathex=[],
     binaries=[],
     datas=[],

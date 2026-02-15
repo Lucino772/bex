@@ -26,15 +26,10 @@ from stdlibx.compose import flow
 from stdlibx.result import Error, Ok, Result, as_result, result_of
 from stdlibx.result import fn as result
 
-from bex.bootstrap.config import load_configuration
-from bex.bootstrap.shared import (
-    BexError,
-    BexPyVenvError,
-    BexUvError,
-    Config,
-)
-from bex.bootstrap.utils import wait_process
-from bex.bootstrap.uv import download_uv
+from bex.config import load_configuration
+from bex.shared import BexError, BexPyVenvError, BexUvError, Config
+from bex.utils import wait_process
+from bex.uv import download_uv
 
 _ENTRYPOINT_PATTERN = re.compile(
     r"(?P<module>[\w.]+)\s*"

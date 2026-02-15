@@ -21,8 +21,8 @@ from stdlibx.option import fn as option
 from stdlibx.result import Ok, as_result, result_of
 from stdlibx.result import fn as result
 
-from bex.bootstrap.shared import BexUvError
-from bex.bootstrap.utils import download_file
+from bex.shared import BexUvError
+from bex.utils import download_file
 
 if TYPE_CHECKING:
     from pathlib import Path

@@ -10,7 +10,7 @@ import tomllib
 from pathlib import Path
 from typing import NamedTuple
 
-_ROOT_DIR = Path(__file__).parent.parent / "bootstrap"
+_ROOT_DIR = Path(__file__).parent.parent
 _PYINSTALLER_SPEC = Path(__file__).parent / "bex.spec"
 
 _TARGET_PATTERN = re.compile(

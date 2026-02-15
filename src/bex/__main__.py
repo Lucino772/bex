@@ -1,4 +1,4 @@
-from bex.bootstrap import main
+from bex import main
 
 if __name__ == "__main__":
     main()
