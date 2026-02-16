@@ -61,7 +61,11 @@ def load_configuration(
         result.collect(_directory, _file),
         result.and_then(
             lambda val: _parse_config(
-                val[0], val[1], bootstrap_only=bootstrap_only, extra_args=extra_args
+                val[0],
+                val[1],
+                bootstrap_only=bootstrap_only,
+                extra_args=extra_args,
+                labels=["bootstrap", "bex"],
             )
         ),
     )
@@ -74,20 +78,20 @@ def _parse_config(
     *,
     bootstrap_only: bool,
     extra_args: list[str] | None,
-    label: str = "bootstrap",
+    labels: list[str],
 ) -> Result[Config, Exception]:
     return flow(
         result_of(lambda: re.finditer(_INLINE_METADATA_REGEX, file.read_text())),
         result.and_then(
             as_result(
-                lambda iterator: (m for m in iterator if m.group("type") == label)
+                lambda iterator: (m for m in iterator if m.group("type") in labels)
             )
         ),
         result.and_then(as_result(list)),
         result.and_then(
             lambda matches: (
                 Error[list[re.Match[str]], Exception](
-                    ValueError(f"Multiple {label} blocks found")
+                    ValueError("Multiple blocks found")
                 )
                 if len(matches) > 1
                 else Ok[list[re.Match[str]], Exception](matches)

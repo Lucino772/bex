@@ -301,6 +301,7 @@ def _execute(config: Config, python_bin: Path) -> Result[int, Exception]:
             if sys.platform == "win32":
                 return result_of(
                     subprocess.call,
+                    args,
                     env=env,
                     stdin=sys.stdin,
                     stdout=sys.stdout,
