@@ -168,3 +168,29 @@ def download(ctx: Context, args: Mapping[str, Any], *, logger: logging.Logger) -
             shutil.move(_path, cached_file)
         elif _path.exists():
             _path.unlink()
+
+
+def inline(ctx: Context, args: Mapping[str, Any], *, logger: logging.Logger):
+    class _Args(BaseModel):
+        content: str
+        target: str
+
+    data = _Args.model_validate(args, from_attributes=False)
+    content = Template(data.content).substitute(
+        {
+            "working_dir": ctx.working_dir,
+            "metadata": ctx.metadata,
+            "environ": ctx.environ,
+        }
+    )
+    target = Path(
+        Template(data.target).substitute(
+            {
+                "working_dir": ctx.working_dir,
+                "metadata": ctx.metadata,
+                "environ": ctx.environ,
+            }
+        )
+    )
+
+    target.write_text(content)
