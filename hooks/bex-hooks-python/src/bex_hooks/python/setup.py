@@ -161,7 +161,17 @@ def _create_isolated_environment(
     for file in req_files:
         full_requirements += "\n" + Path(file).read_text()
 
-    requirements_in.write_bytes(full_requirements.encode("utf-8"))
+    requirements_in.write_bytes(
+        Template(full_requirements)
+        .substitute(
+            {
+                "working_dir": ctx.working_dir,
+                "metadata": ctx.metadata,
+                "environ": ctx.environ,
+            }
+        )
+        .encode("utf-8")
+    )
 
     lock_pip_requirements_rc = wait_process(
         ctx,
