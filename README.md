@@ -10,26 +10,27 @@ Under the hood, `bex` relies on `uv` for environment creation and dependency man
 
 ## CLI
 
-`bex` exposes a small CLI surface (no subcommands). Any extra arguments are forwarded to the configured entrypoint.
+`bex` exposes a CLI.
 
 ### Options
 
-| Flags                      |           Default           | Description                                                     |
-| -------------------------- | :-------------------------: | --------------------------------------------------------------- |
-| `--version`                |           `False`           | Print version information (Python and `bex` version) and exit.  |
-| `-f`, `--file <path>`      | First file matching `bex.*` | Path to the configuration file.                                 |
-| `-C`, `--directory <path>` |  Current working directory  | Directory used to resolve the configuration file.               |
-| `-b`, `--bootstrap-only`   |           `False`           | Only bootstrap the environment (skip executing the entrypoint). |
+These options apply to all commands.
 
-### Passthrough arguments
+| Flags                      |           Default           | Description                                                    |
+| -------------------------- | :-------------------------: | -------------------------------------------------------------- |
+| `--version`                |           `False`           | Print version information (Python and `bex` version) and exit. |
+| `-f`, `--file <path>`      | First file matching `bex.*` | Path to the configuration file.                                |
+| `-C`, `--directory <path>` |  Current working directory  | Directory used to resolve the configuration file.              |
+| `-v`, `--verbose`          |             `0`             | Increase verbosity. Can be repeated (e.g. `-v`, `-vv`).        |
 
-You can optionally provide a command and arguments after the options, they are forwarded as extra arguments to the entrypoint:
+### Commands
 
-```bash
-bex -f bex.conf <command> [args...]
-```
+| Command | Usage                | Description                                                                                                        |
+| ------- | -------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `init`  | `bex init`           | Bootstrap the environment only (if needed).                                                                        |
+| `exec`  | `bex exec [ARGS]...` | Bootstrap the environment (if needed) and execute the configured entrypoint, forwarding any extra arguments to it. |
 
-If `--file` is not provided, `bex` looks for the first file matching `bex.*` in the target directory.
+> Note: `bex exec` accepts arbitrary arguments and forwards them to the entrypoint. Use `--` if you need to prevent `bex` from interpreting flags as its own.
 
 ## Configuration
 
