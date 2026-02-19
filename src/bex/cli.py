@@ -96,22 +96,27 @@ def callback(
     if ctx.invoked_subcommand is None:
         ctx.fail("Missing command.")
 
-    ctx.ensure_object(dict)
-    ctx.obj["file"] = file
-    ctx.obj["directory"] = directory
-
-
-@app.command()
-def init(ctx: typer.Context):
     console = Console()
-    token, cancel = with_cancel(default_token())
 
+    # Configure logging
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.WARNING)
     for handler in root_logger.handlers[:]:
         root_logger.removeHandler(handler)
     handler = RichHandler(console=console, show_path=False, omit_repeated_times=False)
     root_logger.addHandler(handler)
+
+    # Update context
+    ctx.ensure_object(dict)
+    ctx.obj["console"] = console
+    ctx.obj["file"] = file
+    ctx.obj["directory"] = directory
+
+
+@app.command()
+def init(ctx: typer.Context):
+    console: Console = ctx.obj["console"]
+    token, cancel = with_cancel(default_token())
 
     signal.signal(signal.SIGTERM, lambda _, __: cancel())
     signal.signal(signal.SIGINT, lambda _, __: cancel())
@@ -159,15 +164,8 @@ def exec(
         ),
     ] = None,
 ):
-    console = Console()
+    console: Console = ctx.obj["console"]
     token, cancel = with_cancel(default_token())
-
-    root_logger = logging.getLogger()
-    root_logger.setLevel(logging.WARNING)
-    for handler in root_logger.handlers[:]:
-        root_logger.removeHandler(handler)
-    handler = RichHandler(console=console, show_path=False, omit_repeated_times=False)
-    root_logger.addHandler(handler)
 
     signal.signal(signal.SIGTERM, lambda _, __: cancel())
     signal.signal(signal.SIGINT, lambda _, __: cancel())
@@ -202,7 +200,7 @@ def exec(
             console.print(err.msg, style="red")
             ctx.exit(1)
         case Error(err):
-            console.print("Failed to bootstrap environment", style="red")
+            console.print("Failed to execute environment", style="red")
             console.print(
                 Traceback(Traceback.extract(type(err), err, err.__traceback__)),
                 style="dim",
