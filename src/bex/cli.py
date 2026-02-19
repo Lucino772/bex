@@ -46,7 +46,10 @@ _ENTRYPOINT_PATTERN = re.compile(
 app = typer.Typer(
     add_completion=False,
     name="bex",
-    context_settings={"allow_interspersed_args": False},
+    context_settings={
+        "allow_interspersed_args": False,
+        "help_option_names": ["-h", "--help"],
+    },
 )
 
 
@@ -92,6 +95,7 @@ def callback(
             resolve_path=True,
         ),
     ] = None,
+    verbosity: Annotated[int, typer.Option("--verbose", "-v", count=True)] = 0,
 ):
     if ctx.invoked_subcommand is None:
         ctx.fail("Missing command.")
@@ -100,7 +104,13 @@ def callback(
 
     # Configure logging
     root_logger = logging.getLogger()
-    root_logger.setLevel(logging.WARNING)
+    root_logger.setLevel(
+        {
+            0: logging.WARN,
+            1: logging.INFO,
+            2: logging.DEBUG,
+        }.get(verbosity, logging.DEBUG)
+    )
     for handler in root_logger.handlers[:]:
         root_logger.removeHandler(handler)
     handler = RichHandler(console=console, show_path=False, omit_repeated_times=False)
