@@ -30,7 +30,8 @@ These options apply to all commands.
 | `init`  | `bex init`           | Bootstrap the environment only (if needed).                                                                        |
 | `exec`  | `bex exec [ARGS]...` | Bootstrap the environment (if needed) and execute the configured entrypoint, forwarding any extra arguments to it. |
 
-> Note: `bex exec` accepts arbitrary arguments and forwards them to the entrypoint. Use `--` if you need to prevent `bex` from interpreting flags as its own.
+> [!TIP]
+> `bex exec` accepts arbitrary arguments and forwards them to the entrypoint. Use `--` if you need to prevent `bex` from interpreting flags as its own.
 
 ## Configuration
 
