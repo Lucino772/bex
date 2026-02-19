@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import contextlib
 import subprocess
 import tempfile
 from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
-from urllib.request import Request, urlopen
 
+import httpx
 from stdlibx.cancel import CancellationToken, is_token_cancelled
 from stdlibx.compose import flow
 from stdlibx.option import fn as option
@@ -80,20 +81,16 @@ def wait_process(
 
 
 def download_file(
-    cancel_token: CancellationToken,
+    token: CancellationToken,
     source: str,
     *,
     chunk_size: int | None = None,
     report_hook: Callable[[int, int], Any] | None = None,
 ) -> Path:
-    if not source.startswith(("http:", "https:")):
-        msg = "URL must start with 'http:' or 'https:'"
-        raise ValueError(msg)
-
     with (
         tempfile.NamedTemporaryFile(delete=False) as dest,
-        urlopen(  # noqa: S310
-            Request(source, method="GET", headers={"Accept-Encoding": ""}),  # noqa: S310
+        httpx.stream(
+            "GET", source, follow_redirects=True, headers={"Accept-Encoding": ""}
         ) as response,
     ):
         _content_len = (
@@ -102,17 +99,16 @@ def download_file(
             else -1
         )
 
-        while not cancel_token.is_cancelled():
-            chunk = response.read(chunk_size)
-            if not chunk:
-                break
-            dest.write(chunk)
-            if callable(report_hook):
-                report_hook(response.num_bytes_downloaded, _content_len)
+        chunk_iter = response.iter_bytes(chunk_size)
+        with contextlib.suppress(StopIteration):
+            while token.is_cancelled() is False:
+                dest.write(next(chunk_iter))
+                if callable(report_hook):
+                    report_hook(response.num_bytes_downloaded, _content_len)
 
         _path = Path(dest.name)
-        if is_token_cancelled(cancel_token) and _path.exists():
+        if is_token_cancelled(token) and _path.exists():
             _path.unlink()
-            cancel_token.raise_if_cancelled()
+            raise token.get_error()
 
         return _path

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import contextlib
 import datetime as dt
-import json
 import platform
 import shutil
 import stat
@@ -13,8 +12,9 @@ import zipfile
 from collections import defaultdict
 from typing import TYPE_CHECKING
 from urllib.parse import urljoin
-from urllib.request import Request, urlopen
 
+import httpx
+from rich.progress import DownloadColumn, Progress
 from stdlibx.compose import flow
 from stdlibx.option import Nothing, Option, Some, optional_of
 from stdlibx.option import fn as option
@@ -27,6 +27,7 @@ from bex.utils import download_file
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from rich.console import Console
     from stdlibx.cancel import CancellationToken
 
 _UV_DOWNLOAD_URL = "https://github.com/astral-sh/uv/releases/download/{version}/"
@@ -34,7 +35,11 @@ _UV_RELEASES_URL = "https://api.github.com/repos/astral-sh/uv/releases"
 
 
 def download_uv(
-    cancel_token: CancellationToken, directory: Path, *, version: str | None = None
+    console: Console,
+    cancel_token: CancellationToken,
+    directory: Path,
+    *,
+    version: str | None = None,
 ):
     _version = flow(
         optional_of(lambda: version),
@@ -77,15 +82,26 @@ def download_uv(
 
         return uv_bin
 
-    temp_filename = flow(
-        result_of(
-            download_file,
-            cancel_token,
-            urljoin(_UV_DOWNLOAD_URL.format(version=_version), filename),
-        ),
-        result.map_err(lambda _: BexUvError(f"Failed to download uv '{_version}'")),
-        result.unwrap_or_raise(),
-    )
+    with Progress(
+        *Progress.get_default_columns(),
+        DownloadColumn(),
+        console=console,
+        transient=True,
+    ) as pb:
+        task_id = pb.add_task("Downloading uv")
+        temp_filename = flow(
+            result_of(
+                download_file,
+                cancel_token,
+                urljoin(_UV_DOWNLOAD_URL.format(version=_version), filename),
+                report_hook=lambda completed, total: pb.update(
+                    task_id, completed=completed, total=total
+                ),
+            ),
+            result.map_err(lambda _: BexUvError(f"Failed to download uv '{_version}'")),
+            result.unwrap_or_raise(),
+        )
+
     _result = flow(
         result_of(_extract, temp_filename),
         result.map_(lambda val: (val,)),
@@ -140,8 +156,7 @@ def _get_uv_release_info() -> Option[tuple[str, str]]:
 
 
 def _get_uv_latest_version() -> Option[str]:
-    with urlopen(Request(_UV_RELEASES_URL, method="GET")) as res:  #  noqa: S310
-        response = json.load(res)
+    response = httpx.get(_UV_RELEASES_URL).json()
     releases = (
         (str(entry["name"]), dt.datetime.fromisoformat(entry["published_at"]))
         for entry in response

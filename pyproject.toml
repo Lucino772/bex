@@ -8,6 +8,7 @@ authors = [
 ]
 requires-python = ">=3.11"
 dependencies = [
+    "httpx>=0.28.1",
     "ruamel-yaml>=0.18.10,<1",
     "stdlibx-cancel>=0.1.0",
     "stdlibx-compose>=0.1.0,<1",

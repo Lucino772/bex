@@ -107,7 +107,7 @@ def init(ctx: typer.Context):
     token, cancel = with_cancel(default_token())
 
     root_logger = logging.getLogger()
-    root_logger.setLevel(logging.INFO)
+    root_logger.setLevel(logging.WARNING)
     for handler in root_logger.handlers[:]:
         root_logger.removeHandler(handler)
     handler = RichHandler(console=console, show_path=False, omit_repeated_times=False)
@@ -119,7 +119,7 @@ def init(ctx: typer.Context):
     bootstrap_result = flow(
         load_configuration(ctx.obj["directory"], ctx.obj["file"]),
         result.map_(lambda val: (val,)),
-        result.zipped(partial(_bootstrap, token, console, root_logger)),
+        result.zipped(partial(_bootstrap, token, console)),
     )
 
     match bootstrap_result:
@@ -163,7 +163,7 @@ def exec(
     token, cancel = with_cancel(default_token())
 
     root_logger = logging.getLogger()
-    root_logger.setLevel(logging.INFO)
+    root_logger.setLevel(logging.WARNING)
     for handler in root_logger.handlers[:]:
         root_logger.removeHandler(handler)
     handler = RichHandler(console=console, show_path=False, omit_repeated_times=False)
@@ -175,7 +175,7 @@ def exec(
     exec_result = flow(
         load_configuration(ctx.obj["directory"], ctx.obj["file"]),
         result.map_(lambda val: (val,)),
-        result.zipped(partial(_bootstrap, token, console, root_logger)),
+        result.zipped(partial(_bootstrap, token, console)),
         result.inspect(
             lambda _: console.print(
                 "Environment bootstrapped successfully", style="green"
@@ -211,84 +211,83 @@ def exec(
 
 
 def _bootstrap(
-    cancel_token: CancellationToken,
-    console: Console,
-    logger: logging.Logger,
-    config: Config,
+    cancel_token: CancellationToken, console: Console, config: Config
 ) -> Result[Path, Exception]:
-    with console.status("Bootstrapping environment"):
-        # Get working directory
-        match flow(
-            result_of(lambda: config["directory"] / ".bex"),
-            result.and_then(as_result(lambda path: path.mkdir(exist_ok=True) or path)),
-        ):
-            case Ok(directory):
-                working_dir = directory
-            case Error(_) as err:
-                return Error(err.error)
+    logger = logging.getLogger("bex.bootstrap")
 
-        # Get current env hash
-        # TODO: Show warning if we failed to compute env hash
-        env_hash = flow(
-            result_of(
-                lambda: hashlib.sha1(config["filename"].read_bytes()).hexdigest()  # noqa: S324
-            ),
-            result.unwrap_or(""),
-        )
+    # Get working directory
+    match flow(
+        result_of(lambda: config["directory"] / ".bex"),
+        result.and_then(as_result(lambda path: path.mkdir(exist_ok=True) or path)),
+    ):
+        case Ok(directory):
+            working_dir = directory
+        case Error(_) as err:
+            return Error(err.error)
 
-        # Get env hash file
-        match result_of(lambda: working_dir / ".envhash"):
-            case Ok(file):
-                env_hash_file = file
-            case Error(_) as err:
-                return Error(err.error)
+    # Get current env hash
+    # TODO: Show warning if we failed to compute env hash
+    env_hash = flow(
+        result_of(
+            lambda: hashlib.sha1(config["filename"].read_bytes()).hexdigest()  # noqa: S324
+        ),
+        result.unwrap_or(""),
+    )
 
-        # Check if env has changed
-        match result_of(
-            lambda: env_hash_file.exists() and env_hash == env_hash_file.read_text()
-        ):
-            case Ok(hash_matched) if hash_matched is True:
-                return result_of(
-                    lambda: (
-                        working_dir
-                        / ".venv"
-                        / ("Scripts" if sys.platform == "win32" else "bin")
-                        / ("python.exe" if sys.platform == "win32" else "python")
-                    )
+    # Get env hash file
+    match result_of(lambda: working_dir / ".envhash"):
+        case Ok(file):
+            env_hash_file = file
+        case Error(_) as err:
+            return Error(err.error)
+
+    # Check if env has changed
+    match result_of(
+        lambda: env_hash_file.exists() and env_hash == env_hash_file.read_text()
+    ):
+        case Ok(hash_matched) if hash_matched is True:
+            return result_of(
+                lambda: (
+                    working_dir
+                    / ".venv"
+                    / ("Scripts" if sys.platform == "win32" else "bin")
+                    / ("python.exe" if sys.platform == "win32" else "python")
                 )
-            case Error(_) as err:
-                return Error(err.error)
+            )
+        case Error(_) as err:
+            return Error(err.error)
 
-        # Create / Sync python virtual environment
-        match flow(
-            result_of(lambda: working_dir / "cache" / "uv"),
-            result.and_then(
-                as_result(
-                    partial(download_uv, cancel_token, version=config["uv_version"])
+    # Create / Sync python virtual environment
+    match flow(
+        result_of(lambda: working_dir / "cache" / "uv"),
+        result.and_then(
+            as_result(
+                partial(
+                    download_uv, console, cancel_token, version=config["uv_version"]
                 )
-            ),
-            result.inspect(lambda _: console.print("[+] Downloaded UV")),
-            result.and_then(
-                as_result(
-                    lambda uv_bin: _create_isolated_environment(
-                        console,
-                        logger,
-                        cancel_token,
-                        working_dir,
-                        uv_bin,
-                        config["requires_python"],
-                        config["requirements"],
-                    )
+            )
+        ),
+        result.inspect(lambda _: logger.info("Downloaded UV")),
+        result.and_then(
+            as_result(
+                lambda uv_bin: _create_isolated_environment(
+                    console,
+                    cancel_token,
+                    working_dir,
+                    uv_bin,
+                    config["requires_python"],
+                    config["requirements"],
                 )
-            ),
-        ):
-            case Ok(python_bin):
-                # NOTE: If this fail, we don't want the entire program to crash
-                #       instead, we could just show a warning message
-                _ = result_of(env_hash_file.write_text, env_hash)
-                return Ok(python_bin)
-            case Error(_) as err:
-                return Error(err.error)
+            )
+        ),
+    ):
+        case Ok(python_bin):
+            # NOTE: If this fail, we don't want the entire program to crash
+            #       instead, we could just show a warning message
+            _ = result_of(env_hash_file.write_text, env_hash)
+            return Ok(python_bin)
+        case Error(_) as err:
+            return Error(err.error)
 
 
 def _execute(
@@ -371,13 +370,14 @@ def _execute(
 
 def _create_isolated_environment(
     console: Console,
-    logger: logging.Logger,
     cancel_token: CancellationToken,
     root_dir: Path,
     uv_bin: Path,
     python_specifier: str,
     requirements: str,
 ):
+    logger = logging.getLogger("bex.bootstrap")
+
     venv_dir = root_dir / ".venv"
     requirements_in = root_dir / "requirements.in"
     requirements_txt = root_dir / "requirements.txt"
@@ -387,66 +387,67 @@ def _create_isolated_environment(
         / ("python.exe" if platform.system() == "Windows" else "python")
     )
 
-    create_venv_rc = wait_process(
-        [
-            str(uv_bin),
-            "venv",
-            "--allow-existing",
-            "--no-project",
-            "--seed",
-            "--python",
-            python_specifier,
-            "--python-preference",
-            "only-managed",
-            str(venv_dir),
-        ],
-        cancel_token,
-        callback=logger.info,
-    )
-    if create_venv_rc != 0:
-        msg = "Failed to create python virtual environment"
-        raise BexPyVenvError(msg)
+    with console.status("[not dim]Bootstrapping environment[/not dim]"):
+        create_venv_rc = wait_process(
+            [
+                str(uv_bin),
+                "venv",
+                "--allow-existing",
+                "--no-project",
+                "--seed",
+                "--python",
+                python_specifier,
+                "--python-preference",
+                "only-managed",
+                str(venv_dir),
+            ],
+            cancel_token,
+            callback=logger.debug,
+        )
+        if create_venv_rc != 0:
+            msg = "Failed to create python virtual environment"
+            raise BexPyVenvError(msg)
 
-    console.print("[+] Created virtual environment")
+        logger.info("Updated virtual environment")
 
-    requirements_in.write_bytes(requirements.encode("utf-8"))
-    lock_pip_requirements_rc = wait_process(
-        [
-            str(uv_bin),
-            "pip",
-            "compile",
-            "--python",
-            str(python_bin),
-            "--emit-index-url",
-            str(requirements_in),
-            "-o",
-            str(requirements_txt),
-        ],
-        cancel_token,
-        callback=logger.info,
-    )
-    if lock_pip_requirements_rc != 0:
-        msg = "Failed to compile pip requirements"
-        raise BexPyVenvError(msg)
+        requirements_in.write_bytes(requirements.encode("utf-8"))
+        lock_pip_requirements_rc = wait_process(
+            [
+                str(uv_bin),
+                "pip",
+                "compile",
+                "--python",
+                str(python_bin),
+                "--emit-index-url",
+                str(requirements_in),
+                "-o",
+                str(requirements_txt),
+            ],
+            cancel_token,
+            callback=logger.debug,
+        )
+        if lock_pip_requirements_rc != 0:
+            msg = "Failed to compile pip requirements"
+            raise BexPyVenvError(msg)
 
-    console.print("[+] Locked dependencies")
+        logger.info("Locked dependencies")
 
-    sync_pip_requirements_rc = wait_process(
-        [
-            str(uv_bin),
-            "pip",
-            "sync",
-            "--allow-empty-requirements",
-            "--python",
-            str(python_bin),
-            str(requirements_txt),
-        ],
-        cancel_token,
-        callback=logger.info,
-    )
-    if sync_pip_requirements_rc != 0:
-        msg = "Failed to sync pip requirements"
-        raise BexPyVenvError(msg)
+        sync_pip_requirements_rc = wait_process(
+            [
+                str(uv_bin),
+                "pip",
+                "sync",
+                "--allow-empty-requirements",
+                "--python",
+                str(python_bin),
+                str(requirements_txt),
+            ],
+            cancel_token,
+            callback=logger.debug,
+        )
+        if sync_pip_requirements_rc != 0:
+            msg = "Failed to sync pip requirements"
+            raise BexPyVenvError(msg)
 
-    console.print("[+] Synced dependencies")
+        logger.info("Synced dependencies")
     return python_bin
