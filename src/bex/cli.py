@@ -31,8 +31,8 @@ try:
 except Exception:
     __version__ = "unknown"
 
-from bex.config import load_configuration
-from bex.shared import BexError, BexPyVenvError, BexUvError, Config
+from bex.config import Config, load_configuration
+from bex.errors import BexError, BexPyVenvError, BexUvError
 from bex.utils import wait_process
 from bex.uv import download_uv
 

@@ -51,7 +51,7 @@ docstring-code-format = true
 docstring-code-line-length = 80
 
 [tool.ruff.lint.isort]
-known-first-party = ["bex", "bex_exec", "bex_hooks"]
+known-first-party = ["bex"]
 
 [tool.ruff.lint]
 extend-select = ["I", "RUF022", "RUF023", "W505", "TC", "FA", "C4", "PYI", "COM818"]

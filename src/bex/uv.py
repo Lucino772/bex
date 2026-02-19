@@ -21,7 +21,7 @@ from stdlibx.option import fn as option
 from stdlibx.result import Ok, as_result, result_of
 from stdlibx.result import fn as result
 
-from bex.shared import BexUvError
+from bex.errors import BexUvError
 from bex.utils import download_file
 
 if TYPE_CHECKING:

@@ -4,7 +4,7 @@ import glob
 import re
 from functools import partial
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict
 
 from ruamel.yaml import YAML
 from stdlibx.compose import flow
@@ -13,11 +13,21 @@ from stdlibx.option import optional_of
 from stdlibx.result import Error, Ok, Result, as_result, result_of
 from stdlibx.result import fn as result
 
-from bex.shared import BexError, Config
+from bex.errors import BexError
 
 _INLINE_METADATA_REGEX = (
     r"(?m)^# /// (?P<type>[a-zA-Z0-9-]+)$\s(?P<content>(^#(| .*)$\s)+)^# ///$"
 )
+
+
+class Config(TypedDict):
+    directory: Path
+    filename: Path
+
+    uv_version: str | None
+    requires_python: str
+    requirements: str
+    entrypoint: str
 
 
 def load_configuration(
