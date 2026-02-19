@@ -21,12 +21,7 @@ _INLINE_METADATA_REGEX = (
 
 
 def load_configuration(
-    directory: Path | None,
-    filename: Path | None,
-    /,
-    *,
-    bootstrap_only: bool,
-    extra_args: list[str] | None,
+    directory: Path | None, filename: Path | None
 ) -> Result[Config, Exception]:
     _directory = flow(
         optional_of(lambda: directory),
@@ -60,25 +55,13 @@ def load_configuration(
     return flow(
         result.collect(_directory, _file),
         result.and_then(
-            lambda val: _parse_config(
-                val[0],
-                val[1],
-                bootstrap_only=bootstrap_only,
-                extra_args=extra_args,
-                labels=["bootstrap", "bex"],
-            )
+            lambda val: _parse_config(val[0], val[1], labels=["bootstrap", "bex"])
         ),
     )
 
 
 def _parse_config(
-    directory: Path,
-    file: Path,
-    /,
-    *,
-    bootstrap_only: bool,
-    extra_args: list[str] | None,
-    labels: list[str],
+    directory: Path, file: Path, /, *, labels: list[str]
 ) -> Result[Config, Exception]:
     return flow(
         result_of(lambda: re.finditer(_INLINE_METADATA_REGEX, file.read_text())),
@@ -110,8 +93,6 @@ def _parse_config(
                 {
                     "directory": directory,
                     "filename": file,
-                    "bootstrap_only": bootstrap_only,
-                    "extra_args": extra_args or [],
                     "uv_version": config.get("uv"),
                     "requires_python": config["requires-python"],
                     "requirements": config.get("requirements", ""),

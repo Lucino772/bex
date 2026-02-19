@@ -21,8 +21,6 @@ class BexUvError(BexError): ...
 class Config(TypedDict):
     directory: Path
     filename: Path
-    bootstrap_only: bool
-    extra_args: list[str]
 
     uv_version: str | None
     requires_python: str

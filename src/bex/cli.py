@@ -43,22 +43,32 @@ _ENTRYPOINT_PATTERN = re.compile(
 )
 
 
+app = typer.Typer(
+    add_completion=False,
+    name="bex",
+    context_settings={"allow_interspersed_args": False},
+)
+
+
 def main():
-    app = typer.Typer(
-        add_completion=False,
-        name="bex",
-        context_settings={
-            "allow_extra_args": True,
-            "ignore_unknown_options": True,
-        },
-    )
-    app.command()(_cli)
-    app()
+    app(prog_name="bex")
 
 
-def _cli(
+def _show_version(ctx: typer.Context, value: bool):
+    if value is False:
+        return
+
+    typer.echo(f"Python: {platform.python_version()} ({platform.system()})")
+    typer.echo(f"Bex: {__version__}")
+    ctx.exit(0)
+
+
+@app.callback(invoke_without_command=True)
+def callback(
     ctx: typer.Context,
-    version: Annotated[bool, typer.Option("--version")] = False,
+    _: Annotated[
+        bool, typer.Option("--version", callback=_show_version, is_eager=True)
+    ] = False,
     file: Annotated[
         Path | None,
         typer.Option(
@@ -82,26 +92,73 @@ def _cli(
             resolve_path=True,
         ),
     ] = None,
-    bootstrap_only: Annotated[  # noqa: FBT002
-        bool,
-        typer.Option(
-            "-b",
-            "--bootstrap-only",
-        ),
-    ] = False,
-    passthrough: Annotated[
+):
+    if ctx.invoked_subcommand is None:
+        ctx.fail("Missing command.")
+
+    ctx.ensure_object(dict)
+    ctx.obj["file"] = file
+    ctx.obj["directory"] = directory
+
+
+@app.command()
+def init(ctx: typer.Context):
+    console = Console()
+    token, cancel = with_cancel(default_token())
+
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    for handler in root_logger.handlers[:]:
+        root_logger.removeHandler(handler)
+    handler = RichHandler(console=console, show_path=False, omit_repeated_times=False)
+    root_logger.addHandler(handler)
+
+    signal.signal(signal.SIGTERM, lambda _, __: cancel())
+    signal.signal(signal.SIGINT, lambda _, __: cancel())
+
+    bootstrap_result = flow(
+        load_configuration(ctx.obj["directory"], ctx.obj["file"]),
+        result.map_(lambda val: (val,)),
+        result.zipped(partial(_bootstrap, token, console, root_logger)),
+    )
+
+    match bootstrap_result:
+        case Ok(_):
+            console.print("Environment bootstrapped successfully", style="green")
+            ctx.exit(0)
+        case Error(CancellationTokenCancelledError()):
+            console.print("Process was cancelled", style="red")
+            ctx.exit(3)
+        case Error(BexPyVenvError() as err):
+            console.print(
+                f"Error while creating virtual environment: {err.msg}", style="red"
+            )
+            ctx.exit(1)
+        case Error(BexUvError() as err):
+            console.print(f"Error while downloading uv: {err.msg}", style="red")
+            ctx.exit(1)
+        case Error(BexError() as err):
+            console.print(err.msg, style="red")
+            ctx.exit(1)
+        case Error(err):
+            console.print("Failed to bootstrap environment", style="red")
+            console.print(
+                Traceback(Traceback.extract(type(err), err, err.__traceback__)),
+                style="dim",
+            )
+            ctx.exit(1)
+
+
+@app.command(context_settings={"help_option_names": [], "ignore_unknown_options": True})
+def exec(
+    ctx: typer.Context,
+    args: Annotated[
         list[str] | None,
         typer.Argument(
-            metavar="[COMMAND] [ARGS]...",
-            help="Any command and arguments are forwarded to bex",
+            help="Any arguments are forwarded to the entrypoint",
         ),
     ] = None,
 ):
-    if version:
-        typer.echo(f"Python: {platform.python_version()} ({platform.system()})")
-        typer.echo(f"Bex: {__version__}")
-        ctx.exit(0)
-
     console = Console()
     token, cancel = with_cancel(default_token())
 
@@ -116,9 +173,7 @@ def _cli(
     signal.signal(signal.SIGINT, lambda _, __: cancel())
 
     exec_result = flow(
-        load_configuration(
-            directory, file, bootstrap_only=bootstrap_only, extra_args=passthrough
-        ),
+        load_configuration(ctx.obj["directory"], ctx.obj["file"]),
         result.map_(lambda val: (val,)),
         result.zipped(partial(_bootstrap, token, console, root_logger)),
         result.inspect(
@@ -126,7 +181,7 @@ def _cli(
                 "Environment bootstrapped successfully", style="green"
             )
         ),
-        result.and_then(lambda val: _execute(*val)),
+        result.and_then(lambda val: _execute(*val, args or [])),
     )
 
     match exec_result:
@@ -236,10 +291,9 @@ def _bootstrap(
                 return Error(err.error)
 
 
-def _execute(config: Config, python_bin: Path) -> Result[int, Exception]:
-    if config["bootstrap_only"] is True:
-        return Ok(0)
-
+def _execute(
+    config: Config, python_bin: Path, extra_args: list[str]
+) -> Result[int, Exception]:
     # NOTE: Convert entrypoint to python CLI options
     #       either "-m <module_name>" or to "-c <script>" with a script
     #       that imports module and execute function.
@@ -293,7 +347,7 @@ def _execute(config: Config, python_bin: Path) -> Result[int, Exception]:
             lambda: [
                 str(python_bin),
                 *opts,
-                *config["extra_args"],
+                *extra_args,
             ]
         ),
     ):
