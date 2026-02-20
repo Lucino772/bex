@@ -88,7 +88,7 @@ def download_uv(
         console=console,
         transient=True,
     ) as pb:
-        task_id = pb.add_task("Downloading uv")
+        task_id = pb.add_task(f"Downloading uv {_version}")
         temp_filename = flow(
             result_of(
                 download_file,
