@@ -118,6 +118,7 @@ def callback(
 
     # Update context
     ctx.ensure_object(dict)
+    ctx.obj["verbosity"] = verbosity
     ctx.obj["console"] = console
     ctx.obj["file"] = file
     ctx.obj["directory"] = directory
@@ -132,7 +133,7 @@ def init(ctx: typer.Context):
     signal.signal(signal.SIGINT, lambda _, __: cancel())
 
     bootstrap_result = flow(
-        load_configuration(ctx.obj["directory"], ctx.obj["file"]),
+        load_configuration(ctx.obj["directory"], ctx.obj["file"], ctx.obj["verbosity"]),
         result.map_(lambda val: (val,)),
         result.zipped(partial(_bootstrap, token, console)),
     )
@@ -181,7 +182,7 @@ def exec(
     signal.signal(signal.SIGINT, lambda _, __: cancel())
 
     exec_result = flow(
-        load_configuration(ctx.obj["directory"], ctx.obj["file"]),
+        load_configuration(ctx.obj["directory"], ctx.obj["file"], ctx.obj["verbosity"]),
         result.map_(lambda val: (val,)),
         result.zipped(partial(_bootstrap, token, console)),
         result.inspect(
@@ -348,6 +349,7 @@ def _execute(
                 **os.environ,
                 "BEX_FILE": str(config["filename"]),
                 "BEX_DIRECTORY": str(config["directory"]),
+                "BEX_VERBOSITY": str(config["verbosity"]),
             }
         ),
         result_of(

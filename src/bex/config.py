@@ -23,6 +23,7 @@ _INLINE_METADATA_REGEX = (
 class Config(TypedDict):
     directory: Path
     filename: Path
+    verbosity: int
 
     uv_version: str | None
     requires_python: str
@@ -31,7 +32,7 @@ class Config(TypedDict):
 
 
 def load_configuration(
-    directory: Path | None, filename: Path | None
+    directory: Path | None, filename: Path | None, verbosity: int
 ) -> Result[Config, Exception]:
     _directory = flow(
         optional_of(lambda: directory),
@@ -65,13 +66,15 @@ def load_configuration(
     return flow(
         result.collect(_directory, _file),
         result.and_then(
-            lambda val: _parse_config(val[0], val[1], labels=["bootstrap", "bex"])
+            lambda val: _parse_config(
+                val[0], val[1], verbosity, labels=["bootstrap", "bex"]
+            )
         ),
     )
 
 
 def _parse_config(
-    directory: Path, file: Path, /, *, labels: list[str]
+    directory: Path, file: Path, verbosity: int, /, *, labels: list[str]
 ) -> Result[Config, Exception]:
     return flow(
         result_of(lambda: re.finditer(_INLINE_METADATA_REGEX, file.read_text())),
@@ -103,6 +106,7 @@ def _parse_config(
                 {
                     "directory": directory,
                     "filename": file,
+                    "verbosity": verbosity,
                     "uv_version": config.get("uv"),
                     "requires_python": config["requires-python"],
                     "requirements": config.get("requirements", ""),
