@@ -10,10 +10,10 @@ requires-python = ">=3.11"
 dependencies = [
     "httpx>=0.28.1",
     "ruamel-yaml>=0.18.10,<1",
-    "stdlibx-cancel>=0.1.0",
-    "stdlibx-compose>=0.1.0,<1",
-    "stdlibx-option>=0.1.0,<1",
-    "stdlibx-result>=0.1.0,<1",
+    "stdlibx-cancel==0.1.0",
+    "stdlibx-compose==0.1.0",
+    "stdlibx-option==0.2.0",
+    "stdlibx-result==0.2.0",
     "typer>=0.16.0,<1",
 ]
 

@@ -16,6 +16,7 @@ import typer
 from rich.console import Console
 from rich.logging import RichHandler
 from rich.traceback import Traceback
+from stdlibx import result
 from stdlibx.cancel import (
     CancellationToken,
     CancellationTokenCancelledError,
@@ -23,8 +24,7 @@ from stdlibx.cancel import (
     with_cancel,
 )
 from stdlibx.compose import flow
-from stdlibx.result import Error, Ok, Result, as_result, result_of
-from stdlibx.result import fn as result
+from stdlibx.result.types import Error, Ok, Result
 
 try:
     from bex._version import __version__
@@ -226,36 +226,36 @@ def _bootstrap(
 
     # Get working directory
     match flow(
-        result_of(lambda: config["directory"] / ".bex"),
-        result.and_then(as_result(lambda path: path.mkdir(exist_ok=True) or path)),
+        result.try_(lambda: config["directory"] / ".bex"),
+        result.and_then(result.safe(lambda path: path.mkdir(exist_ok=True) or path)),
     ):
         case Ok(directory):
             working_dir = directory
         case Error(_) as err:
-            return Error(err.error)
+            return result.error(err.error)
 
     # Get current env hash
     # TODO: Show warning if we failed to compute env hash
     env_hash = flow(
-        result_of(
+        result.try_(
             lambda: hashlib.sha1(config["filename"].read_bytes()).hexdigest()  # noqa: S324
         ),
         result.unwrap_or(""),
     )
 
     # Get env hash file
-    match result_of(lambda: working_dir / ".envhash"):
+    match result.try_(lambda: working_dir / ".envhash"):
         case Ok(file):
             env_hash_file = file
         case Error(_) as err:
-            return Error(err.error)
+            return result.error(err.error)
 
     # Check if env has changed
-    match result_of(
+    match result.try_(
         lambda: env_hash_file.exists() and env_hash == env_hash_file.read_text()
     ):
         case Ok(hash_matched) if hash_matched is True:
-            return result_of(
+            return result.try_(
                 lambda: (
                     working_dir
                     / ".venv"
@@ -264,13 +264,13 @@ def _bootstrap(
                 )
             )
         case Error(_) as err:
-            return Error(err.error)
+            return result.error(err.error)
 
     # Create / Sync python virtual environment
     match flow(
-        result_of(lambda: working_dir / "cache" / "uv"),
+        result.try_(lambda: working_dir / "cache" / "uv"),
         result.and_then(
-            as_result(
+            result.safe(
                 partial(
                     download_uv, console, cancel_token, version=config["uv_version"]
                 )
@@ -278,7 +278,7 @@ def _bootstrap(
         ),
         result.inspect(lambda _: logger.info("Downloaded UV")),
         result.and_then(
-            as_result(
+            result.safe(
                 lambda uv_bin: _create_isolated_environment(
                     console,
                     cancel_token,
@@ -293,10 +293,10 @@ def _bootstrap(
         case Ok(python_bin):
             # NOTE: If this fail, we don't want the entire program to crash
             #       instead, we could just show a warning message
-            _ = result_of(env_hash_file.write_text, env_hash)
-            return Ok(python_bin)
+            _ = result.try_(env_hash_file.write_text, env_hash)
+            return result.ok(python_bin)
         case Error(_) as err:
-            return Error(err.error)
+            return result.error(err.error)
 
 
 def _execute(
@@ -306,12 +306,12 @@ def _execute(
     #       either "-m <module_name>" or to "-c <script>" with a script
     #       that imports module and execute function.
     match flow(
-        result_of(_ENTRYPOINT_PATTERN.match, config["entrypoint"]),
+        result.try_(_ENTRYPOINT_PATTERN.match, config["entrypoint"]),
         result.and_then(
             lambda match: (
-                Ok[re.Match[str], Exception](match)
+                result.ok(match)
                 if match is not None
-                else Error[re.Match[str], Exception](
+                else result.error(
                     BexError(
                         f"Invalid plugin entrypoint format '{config['entrypoint']}'"
                     )
@@ -319,7 +319,7 @@ def _execute(
             )
         ),
         result.and_then(
-            as_result(
+            result.safe(
                 lambda match_: (
                     ["-m", str(match_.group("module"))]
                     if len(
@@ -341,10 +341,12 @@ def _execute(
         case Ok(opts_):
             opts = opts_
         case Error(_) as err:
-            return Error(BexError("Failed to convert entrypoint to python CLI options"))
+            return result.error(
+                BexError("Failed to convert entrypoint to python CLI options")
+            )
 
     match result.collect(
-        result_of(
+        result.try_(
             lambda: {
                 **os.environ,
                 "BEX_FILE": str(config["filename"]),
@@ -352,7 +354,7 @@ def _execute(
                 "BEX_VERBOSITY": str(config["verbosity"]),
             }
         ),
-        result_of(
+        result.try_(
             lambda: [
                 str(python_bin),
                 *opts,
@@ -362,7 +364,7 @@ def _execute(
     ):
         case Ok((env, args)):
             if sys.platform == "win32":
-                return result_of(
+                return result.try_(
                     subprocess.call,
                     args,
                     env=env,
@@ -373,9 +375,9 @@ def _execute(
                 )
 
             # NOTE: Must be careful what process is executed here
-            return Ok(os.execve(python_bin, args, env))  # noqa: S606
+            return result.ok(os.execve(python_bin, args, env))  # noqa: S606
         case Error(_) as err:
-            return Error(err.error)
+            return result.error(err.error)
 
 
 def _create_isolated_environment(

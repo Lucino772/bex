@@ -56,10 +56,10 @@ dev = [
 requires-dist = [
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "ruamel-yaml", specifier = ">=0.18.10,<1" },
-    { name = "stdlibx-cancel", specifier = ">=0.1.0" },
-    { name = "stdlibx-compose", specifier = ">=0.1.0,<1" },
-    { name = "stdlibx-option", specifier = ">=0.1.0,<1" },
-    { name = "stdlibx-result", specifier = ">=0.1.0,<1" },
+    { name = "stdlibx-cancel", specifier = "==0.1.0" },
+    { name = "stdlibx-compose", specifier = "==0.1.0" },
+    { name = "stdlibx-option", specifier = "==0.2.0" },
+    { name = "stdlibx-result", specifier = "==0.2.0" },
     { name = "typer", specifier = ">=0.16.0,<1" },
 ]
 
@@ -346,26 +346,26 @@ wheels = [
 
 [[package]]
 name = "stdlibx-option"
-version = "0.1.0"
+version = "0.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a2/50/e16b2692365eb5ba6c41541b91374246624ff6c0e8286be1f5dc5387795c/stdlibx_option-0.1.0.tar.gz", hash = "sha256:a48cccbf6d396dc4a4adb370c4d0c57279cbc7a516407b4bf72a23b8047987e5", size = 4507, upload-time = "2026-02-14T17:33:24.855Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/81/bf/3a1424775fdafcb0856c6a131900deae7101e7c2a845616e900b31e4e0fe/stdlibx_option-0.2.0.tar.gz", hash = "sha256:48d67c087c244c206e378d87bf6a8d298d66c7a5f193eebd05ff84c7956e973c", size = 4584, upload-time = "2026-02-22T15:51:41.572Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/bb/7a/da2401a6c52349ae90aad18265520bc3631ee544b32062b7941a8b69019f/stdlibx_option-0.1.0-py3-none-any.whl", hash = "sha256:52999524e59db59fbb2305b1c9e8afb6c5ba6f1995a2e94fdb539393609354e3", size = 8897, upload-time = "2026-02-14T17:33:22.539Z" },
+    { url = "https://files.pythonhosted.org/packages/a8/46/2b9a649b4f4e3fb0f47aa041806426b14812f2dd66ce6fc848c01bbf65e2/stdlibx_option-0.2.0-py3-none-any.whl", hash = "sha256:52820f66911f4d668967676d0234779edba092fea6b9911b8c478da7ef549b51", size = 9123, upload-time = "2026-02-22T15:51:38.964Z" },
 ]
 
 [[package]]
 name = "stdlibx-result"
-version = "0.1.0"
+version = "0.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/dc/90/294e66f574fd33afbf084206f601f891377d0111f6680baae031d6fbc776/stdlibx_result-0.1.0.tar.gz", hash = "sha256:8f943af60cce2e7aae58521506f99d23a2e000bc6f9c1b247178b07dc2edf818", size = 4891, upload-time = "2026-02-14T17:32:51.421Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/9f/3c/84b1dfc71c85e1ff1c3a6f4b8420bdf2232b9bd3efa165a26a713adf1283/stdlibx_result-0.2.0.tar.gz", hash = "sha256:829fe4fe6cec91d0115c14226d0c3d162e7faddca147a4654e6fb9397888dd56", size = 4909, upload-time = "2026-02-22T15:51:40.001Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/32/f1/3b55921948e2816f10fac0c2fd656730964e7c7d8528c404b3faa360ab3d/stdlibx_result-0.1.0-py3-none-any.whl", hash = "sha256:1cedd9a697f1d7c0e03bd16cd1d75ad3255e40fa3f7367e8fe4dc06cce72ffec", size = 9311, upload-time = "2026-02-14T17:32:47.576Z" },
+    { url = "https://files.pythonhosted.org/packages/8a/e0/69b24cba9633c444c2d86f5bf04a9794c59976c3417eb2e4bc7cbc460e3a/stdlibx_result-0.2.0-py3-none-any.whl", hash = "sha256:fd80b437ae2080e6540964f790aa453eb2c395db7db0ee198b362ddbf5c81903", size = 9502, upload-time = "2026-02-22T15:51:42.206Z" },
 ]
 
 [[package]]

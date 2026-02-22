@@ -4,16 +4,17 @@ import glob
 import re
 from functools import partial
 from pathlib import Path
-from typing import Any, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict, cast
 
 from ruamel.yaml import YAML
+from stdlibx import option, result
 from stdlibx.compose import flow
-from stdlibx.option import fn as option
-from stdlibx.option import optional_of
-from stdlibx.result import Error, Ok, Result, as_result, result_of
-from stdlibx.result import fn as result
 
 from bex.errors import BexError
+
+if TYPE_CHECKING:
+    from stdlibx.result.types import Result
+
 
 _INLINE_METADATA_REGEX = (
     r"(?m)^# /// (?P<type>[a-zA-Z0-9-]+)$\s(?P<content>(^#(| .*)$\s)+)^# ///$"
@@ -35,17 +36,17 @@ def load_configuration(
     directory: Path | None, filename: Path | None, verbosity: int
 ) -> Result[Config, Exception]:
     _directory = flow(
-        optional_of(lambda: directory),
-        option.map_or_else(lambda: result_of(Path.cwd), lambda val: Ok(val)),
+        option.maybe(lambda: directory),
+        option.map_or_else(lambda: result.try_(Path.cwd), lambda val: result.ok(val)),
     )
 
     _file = flow(
-        optional_of(lambda: filename),
+        option.maybe(lambda: filename),
         option.map_or_else(
             lambda: flow(
                 _directory,
                 result.and_then(
-                    as_result(
+                    result.safe(
                         lambda directory: (
                             directory / next(glob.iglob("bex.*", root_dir=directory))
                         )
@@ -59,7 +60,7 @@ def load_configuration(
                     )
                 ),
             ),
-            lambda val: Ok(val),
+            lambda val: result.ok(val),
         ),
     )
 
@@ -77,30 +78,31 @@ def _parse_config(
     directory: Path, file: Path, verbosity: int, /, *, labels: list[str]
 ) -> Result[Config, Exception]:
     return flow(
-        result_of(lambda: re.finditer(_INLINE_METADATA_REGEX, file.read_text())),
+        result.try_(lambda: re.finditer(_INLINE_METADATA_REGEX, file.read_text())),
         result.and_then(
-            as_result(
+            result.safe(
                 lambda iterator: (m for m in iterator if m.group("type") in labels)
             )
         ),
-        result.and_then(as_result(list)),
+        result.and_then(result.safe(list)),
         result.and_then(
-            lambda matches: (
-                Error[list[re.Match[str]], Exception](
-                    ValueError("Multiple blocks found")
-                )
-                if len(matches) > 1
-                else Ok[list[re.Match[str]], Exception](matches)
+            lambda matches: cast(
+                "Result[list[re.Match[str]], Exception]",
+                (
+                    result.ok(matches)
+                    if len(matches) == 1
+                    else result.error(ValueError("Multiple blocks found"))
+                ),
             )
         ),
         result.and_then(
             lambda matches: (
                 _parse_inline_metadata(matches[0].group("content"))
                 if len(matches) == 1
-                else Ok({})
+                else result.ok({})
             )
         ),
-        result.and_then(as_result(_validate_config)),
+        result.and_then(result.safe(_validate_config)),
         result.map_(
             lambda config: Config(
                 {
@@ -128,17 +130,17 @@ def _validate_config(config: dict[str, Any]) -> dict[str, Any]:
 
 def _parse_inline_metadata(content: str) -> Result[dict[str, Any], Exception]:
     return flow(
-        Ok(content),
+        result.ok(content),
         result.and_then(
-            as_result(partial(str.splitlines, keepends=True)),
+            result.safe(partial(str.splitlines, keepends=True)),
         ),
         result.and_then(
-            as_result(
+            result.safe(
                 lambda lines: (
                     line[2:] if line.startswith("# ") else line[1:] for line in lines
                 )
             )
         ),
-        result.and_then(as_result("".join)),
-        result.and_then(as_result(YAML(typ="safe").load)),
+        result.and_then(result.safe("".join)),
+        result.and_then(result.safe(YAML(typ="safe").load)),
     )

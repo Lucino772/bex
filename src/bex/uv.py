@@ -15,11 +15,8 @@ from urllib.parse import urljoin
 
 import httpx
 from rich.progress import DownloadColumn, Progress
+from stdlibx import option, result
 from stdlibx.compose import flow
-from stdlibx.option import Nothing, Option, Some, optional_of
-from stdlibx.option import fn as option
-from stdlibx.result import Ok, as_result, result_of
-from stdlibx.result import fn as result
 
 from bex.errors import BexUvError
 from bex.utils import download_file
@@ -29,6 +26,7 @@ if TYPE_CHECKING:
 
     from rich.console import Console
     from stdlibx.cancel import CancellationToken
+    from stdlibx.option.types import Option
 
 _UV_DOWNLOAD_URL = "https://github.com/astral-sh/uv/releases/download/{version}/"
 _UV_RELEASES_URL = "https://api.github.com/repos/astral-sh/uv/releases"
@@ -42,9 +40,9 @@ def download_uv(
     version: str | None = None,
 ):
     _version = flow(
-        optional_of(lambda: version),
+        option.maybe(lambda: version),
         option.map_or_else(
-            as_result(_get_uv_latest_version), lambda ver: Ok(Some(ver))
+            result.safe(_get_uv_latest_version), lambda ver: result.ok(option.some(ver))
         ),
         result.unwrap_or_raise(),
         option.ok_or(BexUvError(f"Invalid UV version '{version}'")),
@@ -90,7 +88,7 @@ def download_uv(
     ) as pb:
         task_id = pb.add_task(f"Downloading uv {_version}")
         temp_filename = flow(
-            result_of(
+            result.try_(
                 download_file,
                 cancel_token,
                 urljoin(_UV_DOWNLOAD_URL.format(version=_version), filename),
@@ -103,22 +101,22 @@ def download_uv(
         )
 
     _result = flow(
-        result_of(_extract, temp_filename),
+        result.try_(_extract, temp_filename),
         result.map_(lambda val: (val,)),
-        result.zipped(as_result(lambda p: p.chmod(p.stat().st_mode | stat.S_IXUSR))),
+        result.zipped(result.safe(lambda p: p.chmod(p.stat().st_mode | stat.S_IXUSR))),
         result.map_(lambda val: val[0]),
         result.map_err(lambda _: BexUvError("Failed to extract uv from archive")),
     )
     with contextlib.suppress(Exception):
         temp_filename.unlink(missing_ok=True)
 
-    return _result.apply(result.unwrap_or_raise())
+    return flow(_result, result.unwrap_or_raise())
 
 
 def _get_uv_release_info() -> Option[tuple[str, str]]:
     system = platform.system().lower()
     if system not in ("windows", "linux", "darwin"):
-        return Nothing()
+        return option.nothing()
 
     arch = defaultdict(
         lambda: None,
@@ -130,7 +128,7 @@ def _get_uv_release_info() -> Option[tuple[str, str]]:
         },
     )[platform.machine()]
     if arch is None:
-        return Nothing()
+        return option.nothing()
 
     vendor = defaultdict(lambda: "unknown", {"windows": "pc", "darwin": "apple"})[
         system
@@ -150,9 +148,9 @@ def _get_uv_release_info() -> Option[tuple[str, str]]:
         target = f"uv-{arch}-{vendor}-{system}"
 
     if system == "windows":
-        return Some((target + ".zip", target))
+        return option.some((target + ".zip", target))
 
-    return Some((target + ".tar.gz", target))
+    return option.some((target + ".tar.gz", target))
 
 
 def _get_uv_latest_version() -> Option[str]:
@@ -162,7 +160,7 @@ def _get_uv_latest_version() -> Option[str]:
         for entry in response
         if entry["draft"] is False and entry["prerelease"] is False
     )
-    return optional_of(
+    return option.maybe(
         lambda: next(
             iter(sorted(releases, key=lambda entry: entry[1], reverse=True)),
             (None, None),

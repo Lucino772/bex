@@ -8,12 +8,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import httpx
+from stdlibx import option, result
 from stdlibx.cancel import CancellationToken, is_token_cancelled
 from stdlibx.compose import flow
-from stdlibx.option import fn as option
-from stdlibx.option import optional_of
-from stdlibx.result import Error, Ok, as_result
-from stdlibx.result import fn as result
+from stdlibx.result.types import Error, Ok
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -54,17 +52,21 @@ def wait_process(
 
     while True:
         _result = flow(
-            optional_of(lambda: process.stdout),
+            option.maybe(lambda: process.stdout),
             option.map_or_else(
-                lambda: Ok("\n") if process.poll() is None else Ok(""),
-                as_result(
+                lambda: result.ok("\n") if process.poll() is None else result.ok(""),
+                result.safe(
                     lambda stdout: (
                         stdout.readline() or "\n" if process.poll() is None else ""
                     )
                 ),
             ),
             result.and_then(
-                lambda val: Ok(val) if len(val) > 0 else Error(_ProcessEndedError())
+                lambda val: (
+                    result.ok(val)
+                    if len(val) > 0
+                    else result.error(_ProcessEndedError())
+                )
             ),
             result.map_(lambda val: val.strip("\n")),
         )
